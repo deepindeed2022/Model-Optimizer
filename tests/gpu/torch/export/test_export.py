@@ -253,6 +253,32 @@ def test_postprocess_state_dict(state_dict, quantization, maxbound, expected_sta
     assert processed_state_dict == expected_state_dict
 
 
+def test_postprocess_state_dict_fp8_renames_scales():
+    """FP8 export should rename weight_scale -> weight_scale_inv and drop input_scale."""
+    state_dict = {
+        "layer.gate_proj.weight": torch.ones(4, 4, dtype=torch.float8_e4m3fn),
+        "layer.gate_proj.weight_scale": torch.tensor(0.5),
+        "layer.gate_proj.input_scale": torch.tensor(1.0),
+        "layer.up_proj.weight": torch.ones(4, 4, dtype=torch.float8_e4m3fn),
+        "layer.up_proj.weight_scale": torch.tensor(0.25),
+        "layer.up_proj.input_scale": torch.tensor(2.0),
+        "layer.norm.weight": torch.ones(4),
+    }
+    result = postprocess_state_dict(state_dict, 448, None, quant_algo="FP8")
+
+    assert "layer.gate_proj.weight_scale_inv" in result
+    assert torch.equal(result["layer.gate_proj.weight_scale_inv"], torch.tensor(0.5))
+    assert "layer.gate_proj.weight_scale" not in result
+    assert "layer.gate_proj.input_scale" not in result
+
+    assert "layer.up_proj.weight_scale_inv" in result
+    assert "layer.up_proj.weight_scale" not in result
+    assert "layer.up_proj.input_scale" not in result
+
+    assert "layer.gate_proj.weight" in result
+    assert "layer.norm.weight" in result
+
+
 @pytest.mark.parametrize(
     ("config", "expected"),
     [

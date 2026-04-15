@@ -1031,6 +1031,7 @@ def postprocess_state_dict(
     maxbound: float,
     quantization: str | None,
     is_modelopt_qlora: bool = False,
+    quant_algo: str | None = None,
 ) -> dict:
     """Filters out keys related to weight quantizers and updates KV cache related keys.
 
@@ -1039,6 +1040,9 @@ def postprocess_state_dict(
         maxbound: The maximum bound value for the output quantizer.
         quantization: The KV cache quantization format.
         is_modelopt_qlora: Whether the model is a modelopt-trained QLoRA model.
+        quant_algo: The main quantization algorithm (e.g. "FP8"). When "FP8", the exported
+            state dict uses HF-native naming (``weight_scale_inv`` instead of ``weight_scale``,
+            no ``input_scale``) for maximum compatibility with inference engines.
 
     Returns:
         The filtered state_dict without unnecessary keys like '_amax' and non KV cache output quantizers.
@@ -1147,6 +1151,22 @@ def postprocess_state_dict(
 
     for key in keys_to_delete:
         del post_state_dict[key]
+
+    # For FP8 quantization, convert to HF-native naming convention so that
+    # inference engines (TRT-LLM, vLLM, SGLang) can load without special-casing
+    # the "modelopt" format.  Concretely:
+    #   weight_scale  -> weight_scale_inv   (same numeric value; both are amax/maxbound)
+    #   input_scale   -> removed            (activation quantization becomes dynamic)
+    if quant_algo == "FP8":
+        renamed_dict: dict[str, Any] = {}
+        for key, value in post_state_dict.items():
+            if key.endswith(".input_scale"):
+                continue
+            if key.endswith(".weight_scale"):
+                renamed_dict[key[: -len("weight_scale")] + "weight_scale_inv"] = value
+            else:
+                renamed_dict[key] = value
+        post_state_dict = renamed_dict
 
     return post_state_dict
 

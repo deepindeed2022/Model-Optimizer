@@ -161,16 +161,29 @@ def convert_hf_quant_config_format(input_config: dict[str, Any]) -> dict[str, An
     original_quantization_details = input_config.get("quantization", {})
     quant_algo_value = original_quantization_details.get("quant_algo")
 
-    # This structure is derived based on the example for "FP8" and "NVFP4"
-    # TODO: Handle other quantization algorithms
+    # FP8 uses the HF-native "fp8" quant_method format for broadest compatibility
+    # with inference engines (TRT-LLM, vLLM, SGLang).
     if quant_algo_value == "FP8":
-        config_group_details = {
-            "input_activations": {"dynamic": False, "num_bits": 8, "type": "float"},
-            "weights": {"dynamic": False, "num_bits": 8, "type": "float"},
-            "targets": ["Linear"],
-        }
-        new_config["config_groups"] = {"group_0": config_group_details}
-    elif quant_algo_value == "NVFP4":
+        exclude_modules = original_quantization_details.get("exclude_modules")
+        new_config["quant_method"] = "fp8"
+        new_config["activation_scheme"] = "dynamic"
+        new_config["modules_to_not_convert"] = exclude_modules if exclude_modules is not None else []
+
+        producer_info = input_config.get("producer")
+        if producer_info:
+            new_config["producer"] = producer_info
+
+        kv_cache_quant_algo = original_quantization_details.get("kv_cache_quant_algo")
+        if kv_cache_quant_algo:
+            if kv_cache_quant_algo == "FP8":
+                new_config["kv_cache_scheme"] = {"dynamic": False, "num_bits": 8, "type": "float"}
+            else:
+                new_config["kv_cache_scheme"] = kv_cache_quant_algo
+
+        return new_config
+
+    # Non-FP8 formats use the compressed-tensors "modelopt" format
+    if quant_algo_value == "NVFP4":
         group_size = original_quantization_details.get("group_size", 16)
         config_group_details = {
             "input_activations": {
