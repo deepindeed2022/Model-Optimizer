@@ -247,10 +247,15 @@ def test_hf_decoder_discoverer_registration_path():
     )
 
 
-def test_qwen3_5_hybrid_attention_quantize():
-    """Verify FP8 quantization disables all linear_attn quantizers while self_attn is quantized."""
+@pytest.mark.parametrize(
+    "quant_cfg",
+    [mtq.FP8_DEFAULT_CFG, mtq.INT4_AWQ_CFG, mtq.NVFP4_DEFAULT_CFG],
+    ids=["fp8", "int4_awq", "nvfp4"],
+)
+def test_qwen3_5_hybrid_attention_quantize(quant_cfg):
+    """Verify quantization disables all linear_attn quantizers while self_attn is quantized."""
     model = get_tiny_qwen3_5()
-    mtq.quantize(model, mtq.FP8_DEFAULT_CFG, lambda m: m(**m.dummy_inputs))
+    mtq.quantize(model, quant_cfg, lambda m: m(**m.dummy_inputs))
 
     for name, module in model.named_modules():
         if not hasattr(module, "weight_quantizer"):
@@ -259,9 +264,10 @@ def test_qwen3_5_hybrid_attention_quantize():
             assert not module.weight_quantizer.is_enabled, (
                 f"linear_attn module {name} should have weight_quantizer disabled"
             )
-            assert not module.input_quantizer.is_enabled, (
-                f"linear_attn module {name} should have input_quantizer disabled"
-            )
+            if hasattr(module, "input_quantizer"):
+                assert not module.input_quantizer.is_enabled, (
+                    f"linear_attn module {name} should have input_quantizer disabled"
+                )
         elif "self_attn" in name and "layernorm" not in name:
             assert module.weight_quantizer.is_enabled, (
                 f"self_attn module {name} should have weight_quantizer enabled"
@@ -272,13 +278,18 @@ def test_qwen3_5_hybrid_attention_quantize():
     Version(torch.__version__) < Version("2.9"),
     reason="torch 2.8 grouped_mm is CUDA-only",
 )
-def test_qwen3_5_moe_experts_not_quantized():
+@pytest.mark.parametrize(
+    "base_cfg",
+    [mtq.FP8_DEFAULT_CFG, mtq.INT4_AWQ_CFG, mtq.NVFP4_DEFAULT_CFG],
+    ids=["fp8", "int4_awq", "nvfp4"],
+)
+def test_qwen3_5_moe_experts_not_quantized(base_cfg):
     """Verify MoE expert quantizers are disabled when build_quant_cfg rules are applied."""
     model = get_tiny_qwen3_5_moe()
 
     import copy
 
-    quant_cfg = copy.deepcopy(mtq.FP8_DEFAULT_CFG)
+    quant_cfg = copy.deepcopy(base_cfg)
     quant_cfg["quant_cfg"].append({"quantizer_name": "*experts*", "enable": False})
 
     mtq.quantize(model, quant_cfg, lambda m: m(**m.dummy_inputs))

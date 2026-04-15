@@ -109,7 +109,7 @@ Please reference our [framework scripts](#framework-scripts) and our [docs](http
 | Gemma 3 | ✅<sup>2</sup> | - | ✅ | - | - |
 | QWen 2, 2.5 <sup>4</sup> | ✅ | ✅ | ✅ | ✅ | ✅ |
 | QWen3, Next <sup>6</sup> | ✅ | - | - | - | ✅ |
-| QWen3.5 (Dense & MoE) <sup>6</sup> | ✅ | - | - | - | ✅ |
+| QWen3.5 (Dense & MoE) <sup>6</sup> | ✅ | - | ✅ | - | ✅ |
 | QwQ | ✅ | - | - | - | ✅ |
 | DeepSeek V3, R1, V3.1, V3.2<sup>7</sup> | - | - | - | - | ✅ |
 | GLM-4.7<sup>8</sup> | ✅ | - | - | - | ✅ |
@@ -480,6 +480,8 @@ print(llm_fp8.generate(["What's the age of the earth? "]))
 | QWen3 MoE | FP8 | ✅ | ✅ | ✅ |
 | QWen3 MoE | FP4 | ✅ | - | - |
 | QWen3.5 Dense | FP8 | ✅ | ✅ | ✅ |
+| QWen3.5 Dense | FP4 | ✅ | ✅ | ✅ |
+| QWen3.5 Dense | INT4_AWQ | ✅ | ✅ | ✅ |
 | QWen3.5 MoE | FP8 | ✅ | ✅ | ✅ |
 | QWen3.5 MoE | FP4 | - | - | ✅ |
 | QWen2.5 | FP8 | ✅ | ✅ | ✅ |

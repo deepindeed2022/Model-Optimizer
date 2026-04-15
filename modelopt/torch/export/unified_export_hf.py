@@ -337,6 +337,11 @@ def requantize_resmooth_fused_llm_layers(model: torch.nn.Module):
             quantization_format is not QUANTIZATION_NONE
             and ("awq" in quantization_format or quantization_format == QUANTIZATION_NVFP4_SVDQUANT)
         ):
+            experts_mod = getattr(module, "experts", None)
+            if experts_mod is not None and hasattr(experts_mod, "gate_up_proj_weight_quantizers"):
+                if all(not q.is_enabled for q in experts_mod.gate_up_proj_weight_quantizers):
+                    continue
+
             # update_experts_avg_prequant_scale(module)
             grouped_experts = get_experts_list(module, model_type)
             for modules in grouped_experts:
@@ -506,7 +511,7 @@ def _export_quantized_weight(
 
         if (
             input_quantizer is not None
-            and "disabled" not in repr(input_quantizer)
+            and input_quantizer.is_enabled
             and input_quantizer.amax is not None
         ):
             sub_module.register_buffer(

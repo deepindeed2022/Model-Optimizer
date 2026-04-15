@@ -38,7 +38,7 @@ Please refer to the [llm_ptq/README.md](../llm_ptq/README.md#getting-started) fo
 | VILA | ✅ | ✅ | ✅ | ✅ | - |
 | Phi-3-vision, Phi-4-multimodal | ✅ | ✅ | ✅ | ✅ | ✅  |
 | Qwen2, 2.5-VL | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Qwen3.5-VL (Dense & MoE) | ✅ | - | - | - | - |
+| Qwen3.5-VL (Dense & MoE) | ✅ | - | ✅ | - | ✅ |
 | Gemma3 | ✅ | - | - | - | - |
 
 > *<sup>1.</sup>Only TensorRT-LLM checkpoint export is supported. Not compatible with the TensorRT-LLM torch backend* \
